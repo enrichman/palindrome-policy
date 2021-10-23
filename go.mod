@@ -1,4 +1,4 @@
-module github.com/kubewarden/go-policy-template
+module github.com/enrichman/palindrome-policy
 
 go 1.15
 

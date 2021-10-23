@@ -9,7 +9,7 @@ func TestParsingSettingsWithAllValuesProvidedFromValidationReq(t *testing.T) {
 	{
 		"request": "doesn't matter here",
 		"settings": {
-			"denied_names": [ "foo", "bar" ]
+			"whitelisted_labels": [ "level", "radar" ]
 		}
 	}
 	`
@@ -20,11 +20,44 @@ func TestParsingSettingsWithAllValuesProvidedFromValidationReq(t *testing.T) {
 		t.Errorf("Unexpected error %+v", err)
 	}
 
-	expected := []string{"foo", "bar"}
+	valid, err := settings.Valid()
+	if !valid {
+		t.Errorf("Settings are reported as not valid")
+	}
+	if err != nil {
+		t.Errorf("Unexpected error %+v", err)
+	}
+
+	expected := []string{"level", "radar"}
 	for _, exp := range expected {
-		if !settings.DeniedNames.Contains(exp) {
+		if !settings.WhitelistedLabels.Contains(exp) {
 			t.Errorf("Missing value %s", exp)
 		}
+	}
+}
+
+func TestParsingSettingsWithNotPalindromeLabelsAreNotValid(t *testing.T) {
+	request := `
+	{
+		"request": "doesn't matter here",
+		"settings": {
+			"whitelisted_labels": [ "foo", "bar" ]
+		}
+	}
+	`
+	rawRequest := []byte(request)
+
+	settings, err := NewSettingsFromValidationReq(rawRequest)
+	if err != nil {
+		t.Errorf("Unexpected error %+v", err)
+	}
+
+	valid, err := settings.Valid()
+	if valid {
+		t.Errorf("Settings are reported as valid")
+	}
+	if err == nil {
+		t.Errorf("Unexpected missing error")
 	}
 }
 
@@ -32,8 +65,7 @@ func TestParsingSettingsWithNoValueProvided(t *testing.T) {
 	request := `
 	{
 		"request": "doesn't matter here",
-		"settings": {
-		}
+		"settings": {}
 	}
 	`
 	rawRequest := []byte(request)
@@ -43,8 +75,8 @@ func TestParsingSettingsWithNoValueProvided(t *testing.T) {
 		t.Errorf("Unexpected error %+v", err)
 	}
 
-	if settings.DeniedNames.Cardinality() != 0 {
-		t.Errorf("Expecpted DeniedNames to be empty")
+	if settings.WhitelistedLabels.Cardinality() != 0 {
+		t.Errorf("Expecpted WhitelistedLabels to be empty")
 	}
 }
 

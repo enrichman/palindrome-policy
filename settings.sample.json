@@ -1,5 +1,5 @@
 {
-  "denied_names": [
-    "tls-example-ingress"
+  "whitelisted_labels": [
+    "level"
   ]
 }

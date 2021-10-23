@@ -1,6 +1,9 @@
 package main
 
 import (
+	"errors"
+	"strings"
+
 	mapset "github.com/deckarep/golang-set"
 	"github.com/kubewarden/gjson"
 	kubewarden "github.com/kubewarden/policy-sdk-go"
@@ -9,7 +12,7 @@ import (
 )
 
 type Settings struct {
-	DeniedNames mapset.Set `json:"denied_names"`
+	WhitelistedLabels mapset.Set `json:"whitelisted_labels"`
 }
 
 // Builds a new Settings instance starting from a validation
@@ -17,46 +20,59 @@ type Settings struct {
 // {
 //    "request": ...,
 //    "settings": {
-//       "denied_names": [...]
+//       "whitelisted_labels": [...]
 //    }
 // }
 func NewSettingsFromValidationReq(payload []byte) (Settings, error) {
 	return newSettings(
 		payload,
-		"settings.denied_names")
+		"settings.whitelisted_labels")
 }
 
 // Builds a new Settings instance starting from a Settings
 // payload:
 // {
-//    "denied_names": ...
+//    "whitelisted_labels": ...
 // }
 func NewSettingsFromValidateSettingsPayload(payload []byte) (Settings, error) {
 	return newSettings(
 		payload,
-		"denied_names")
+		"whitelisted_labels")
 }
 
-func newSettings(payload []byte, paths ...string) (Settings, error) {
-	if len(paths) != 1 {
-		return Settings{}, fmt.Errorf("wrong number of json paths")
-	}
+func newSettings(payload []byte, whitelistedLabelsPath string) (Settings, error) {
+	data := gjson.GetBytes(payload, whitelistedLabelsPath)
 
-	data := gjson.GetManyBytes(payload, paths...)
-
-	deniedNames := mapset.NewThreadUnsafeSet()
-	data[0].ForEach(func(_, entry gjson.Result) bool {
-		deniedNames.Add(entry.String())
+	whitelistedLabels := mapset.NewThreadUnsafeSet()
+	data.ForEach(func(_, entry gjson.Result) bool {
+		whitelistedLabels.Add(entry.String())
 		return true
 	})
 
 	return Settings{
-		DeniedNames: deniedNames,
+		WhitelistedLabels: whitelistedLabels,
 	}, nil
 }
 
 // No special check has to be done
 func (s *Settings) Valid() (bool, error) {
+	notPalindromeLabels := []string{}
+
+	for _, label := range s.WhitelistedLabels.ToSlice() {
+		if !isPalindrome(label.(string)) {
+			notPalindromeLabels = append(notPalindromeLabels, label.(string))
+		}
+	}
+
+	if len(notPalindromeLabels) > 0 {
+		errMsg := fmt.Sprintf(
+			"The following whitelisted labels are not palindromes: %s",
+			strings.Join(notPalindromeLabels, ","),
+		)
+
+		return false, errors.New(errMsg)
+	}
+
 	return true, nil
 }
 

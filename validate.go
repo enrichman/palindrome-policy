@@ -2,13 +2,20 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
-	onelog "github.com/francoispqt/onelog"
+	mapset "github.com/deckarep/golang-set"
 	"github.com/kubewarden/gjson"
 	kubewarden "github.com/kubewarden/policy-sdk-go"
 )
 
 func validate(payload []byte) ([]byte, error) {
+	if !gjson.ValidBytes(payload) {
+		return kubewarden.RejectRequest(
+			kubewarden.Message("Not a valid JSON document"),
+			kubewarden.Code(400))
+	}
+
 	settings, err := NewSettingsFromValidationReq(payload)
 	if err != nil {
 		return kubewarden.RejectRequest(
@@ -18,31 +25,52 @@ func validate(payload []byte) ([]byte, error) {
 
 	data := gjson.GetBytes(
 		payload,
-		"request.object.metadata.name")
+		"request.object.metadata.labels")
 
-	if !data.Exists() {
-		logger.Warn("cannot read object name from metadata: accepting request")
-		return kubewarden.AcceptRequest()
-	}
-	name := data.String()
+	palindromeLabels := mapset.NewThreadUnsafeSet()
 
-	logger.DebugWithFields("validating ingress object", func(e onelog.Entry) {
-		namespace := gjson.GetBytes(payload, "request.object.metadata.namespace").String()
-		e.String("name", name)
-		e.String("namespace", namespace)
+	data.ForEach(func(key, value gjson.Result) bool {
+		label := key.String()
+
+		if isPalindrome(label) {
+			palindromeLabels.Add(label)
+		}
+		return true
 	})
 
-	if settings.DeniedNames.Contains(name) {
-		logger.InfoWithFields("rejecting ingress object", func(e onelog.Entry) {
-			e.String("name", name)
-			e.String("denied_names", settings.DeniedNames.String())
-		})
+	error_msgs := []string{}
 
+	notWhitelistedPalindromeLabels := palindromeLabels.Difference(settings.WhitelistedLabels)
+	if notWhitelistedPalindromeLabels.Cardinality() > 0 {
+		palindromes := []string{}
+		for _, v := range notWhitelistedPalindromeLabels.ToSlice() {
+			palindromes = append(palindromes, v.(string))
+		}
+
+		error_msgs = append(
+			error_msgs,
+			fmt.Sprintf(
+				"The following labels are not-whitelisted palindromes: %s",
+				strings.Join(palindromes, ","),
+			))
+	}
+
+	if len(error_msgs) > 0 {
 		return kubewarden.RejectRequest(
-			kubewarden.Message(
-				fmt.Sprintf("The '%s' name is on the deny list", name)),
+			kubewarden.Message(strings.Join(error_msgs, ". ")),
 			kubewarden.NoCode)
 	}
 
 	return kubewarden.AcceptRequest()
+}
+
+func isPalindrome(label string) bool {
+	for head := 0; head < len(label)/2; head++ {
+		tail := len(label) - head - 1
+
+		if label[head] != label[tail] {
+			return false
+		}
+	}
+	return true
 }
