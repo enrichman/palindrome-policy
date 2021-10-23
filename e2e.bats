@@ -9,7 +9,7 @@
   # request rejected
   [ "$status" -eq 0 ]
   [ $(expr "$output" : '.*allowed.*false') -ne 0 ]
-  # [ $(expr "$output" : ".*The 'tls-example-ingress' name is on the deny list.*") -ne 0 ]
+  [ $(expr "$output" : ".*The following labels are not-whitelisted palindromes: level,radar.*") -ne 0 ]
 }
 
 @test "accept because pod has all whitelisted palindrome labels" {
@@ -22,15 +22,15 @@
   [ $(expr "$output" : '.*allowed.*true') -ne 0 ]
 }
 
-@test "reject because pod has palindrome labels that are not whitelisted" {
-  run kwctl run policy.wasm -r test_data/pod-palindrome.json
+@test "reject because pod has some palindrome labels that are not whitelisted" {
+  run kwctl run policy.wasm -r test_data/pod-palindrome.json --settings-json '{"whitelisted_labels": ["level"]}'
   # this prints the output when one the checks below fails
   echo "output = ${output}"
 
   # request accepted
   [ "$status" -eq 0 ]
   [ $(expr "$output" : '.*allowed.*false') -ne 0 ]
-  # [ $(expr "$output" : ".*The 'tls-example-ingress' name is on the deny list.*") -ne 0 ]
+  [ $(expr "$output" : ".*The following labels are not-whitelisted palindromes: radar.*") -ne 0 ]
 }
 
 @test "accept because pod has no palindrome labels" {
