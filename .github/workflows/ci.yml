@@ -3,9 +3,9 @@ name: CI
 on:
   push:
     branches:
-    - main
+      - main
     tags:
-    - 'v*'
+      - "v*"
   pull_request: {}
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
       - name: setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: '1.15'
+          go-version: "1.15"
 
       - name: run Go unit tests
         run: make test
@@ -50,13 +50,11 @@ jobs:
       # Building the Wasm module
       #############################
 
-      -
-        name: Install tinygo
+      - name: Install tinygo
         run: |
           wget https://github.com/tinygo-org/tinygo/releases/download/v${{ env.TINYGO_VERSION }}/tinygo_${{ env.TINYGO_VERSION }}_amd64.deb
           sudo dpkg -i tinygo_${{ env.TINYGO_VERSION}}_amd64.deb
-      -
-        name: Build Wasm module
+      - name: Build Wasm module
         run: |
           tinygo build -o ${{ env.WASM_BINARY_NAME }} -target=wasi -no-debug .
 
@@ -91,7 +89,7 @@ jobs:
     if: github.event.workflow_run.event != 'pull_request'
     runs-on: ubuntu-latest
     env:
-      OCI_TARGET: #TODO: change to something like ghcr.io/kubewarden/policies/safe-labels
+      OCI_TARGET: ghcr.io/enrichman/kubewarden-policies/palindrome-labels
       KWCTL_VERSION: v0.1.10
 
     steps:
