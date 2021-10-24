@@ -9,7 +9,8 @@ func TestParsingSettingsWithAllValuesProvidedFromValidationReq(t *testing.T) {
 	{
 		"request": "doesn't matter here",
 		"settings": {
-			"whitelisted_labels": [ "level", "radar" ]
+			"whitelisted_labels": [ "level", "radar" ],
+			"threshold": 2
 		}
 	}
 	`
@@ -34,6 +35,10 @@ func TestParsingSettingsWithAllValuesProvidedFromValidationReq(t *testing.T) {
 			t.Errorf("Missing value %s", exp)
 		}
 	}
+
+	if settings.Threshold != 2 {
+		t.Errorf("Invalid threshold %d", settings.Threshold)
+	}
 }
 
 func TestParsingSettingsWithNotPalindromeLabelsAreNotValid(t *testing.T) {
@@ -42,6 +47,31 @@ func TestParsingSettingsWithNotPalindromeLabelsAreNotValid(t *testing.T) {
 		"request": "doesn't matter here",
 		"settings": {
 			"whitelisted_labels": [ "foo", "bar" ]
+		}
+	}
+	`
+	rawRequest := []byte(request)
+
+	settings, err := NewSettingsFromValidationReq(rawRequest)
+	if err != nil {
+		t.Errorf("Unexpected error %+v", err)
+	}
+
+	valid, err := settings.Valid()
+	if valid {
+		t.Errorf("Settings are reported as valid")
+	}
+	if err == nil {
+		t.Errorf("Unexpected missing error")
+	}
+}
+
+func TestParsingSettingsWithNegativeThresholdAreNotValid(t *testing.T) {
+	request := `
+	{
+		"request": "doesn't matter here",
+		"settings": {
+			"threshold": -2
 		}
 	}
 	`

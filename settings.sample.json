@@ -1,5 +1,6 @@
 {
   "whitelisted_labels": [
     "level"
-  ]
+  ],
+  "threshold": 2
 }

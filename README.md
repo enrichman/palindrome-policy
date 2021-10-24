@@ -1,26 +1,27 @@
-# go-policy-template
+# Palindrome Policy
 
-This is a template repository that can be used to quickly scaffold a
-Kubewarden policy written with Go language.
+This Kubewarden policy can be used to avoid the deployment of Pod with palindrome labels.
 
-Don't forget to checkout Kubewarden's [official documentation](https://docs.kubewarden.io)
-for more information about writing policies.
 
 ## Introduction
 
-This repository contains a working policy written in Go.
+The policy looks at the `labels` of a Pod and rejects the request if it contains any label that is a palindrome.
 
-The policy looks at the `name` of a Kubernetes resource and rejects the request
-if the name is on a deny list.
-
-The deny list is configurable by the user via the runtime settings of the policy.
+The policy can be configured to whitelist a set of labels and to tolerate a threshold via the runtime settings of the policy.
 The configuration of the policy is expressed via this structure:
 
 ```json
 {
-  "denied_names": [ "badname1", "badname2" ]
+  "whitelisted_labels": [ "level" ],
+  "threshold": 1
 }
 ```
+
+If the `threshold` is set then the request is rejected only if the number of palindromes exceed the value set.
+The `whitelisted_labels` doesn't count to exceed the threshold.
+
+i.e.: with the previous settings a Pod with the `["level", "radar"]` labels would be approved, since the `level` label is whitelisted and the threshold is `1`.
+
 
 ## Code organization
 

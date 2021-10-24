@@ -9,7 +9,7 @@
   # request rejected
   [ "$status" -eq 0 ]
   [ $(expr "$output" : '.*allowed.*false') -ne 0 ]
-  [ $(expr "$output" : ".*The following labels are not-whitelisted palindromes: level,radar.*") -ne 0 ]
+  [ $(expr "$output" : ".*Too many palindrome labels that are not-whitelisted:.*Max allowed") -ne 0 ]
 }
 
 @test "accept because pod has all whitelisted palindrome labels" {
@@ -30,11 +30,21 @@
   # request accepted
   [ "$status" -eq 0 ]
   [ $(expr "$output" : '.*allowed.*false') -ne 0 ]
-  [ $(expr "$output" : ".*The following labels are not-whitelisted palindromes: radar.*") -ne 0 ]
+  [ $(expr "$output" : ".*Too many palindrome labels that are not-whitelisted:.*Max allowed") -ne 0 ]
 }
 
 @test "accept because pod has no palindrome labels" {
   run kwctl run policy.wasm -r test_data/pod.json
+  # this prints the output when one the checks below fails
+  echo "output = ${output}"
+
+  # request accepted
+  [ "$status" -eq 0 ]
+  [ $(expr "$output" : '.*allowed.*true') -ne 0 ]
+}
+
+@test "accept because pod has some palindrome labels that are not whitelisted but inside the threshold" {
+  run kwctl run policy.wasm -r test_data/pod-palindrome.json --settings-json '{"whitelisted_labels": ["level"], "threshold": 1}'
   # this prints the output when one the checks below fails
   echo "output = ${output}"
 

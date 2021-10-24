@@ -41,7 +41,7 @@ func validate(payload []byte) ([]byte, error) {
 	error_msgs := []string{}
 
 	notWhitelistedPalindromeLabels := palindromeLabels.Difference(settings.WhitelistedLabels)
-	if notWhitelistedPalindromeLabels.Cardinality() > 0 {
+	if notWhitelistedPalindromeLabels.Cardinality() > settings.Threshold {
 		palindromes := []string{}
 		for _, v := range notWhitelistedPalindromeLabels.ToSlice() {
 			palindromes = append(palindromes, v.(string))
@@ -50,8 +50,9 @@ func validate(payload []byte) ([]byte, error) {
 		error_msgs = append(
 			error_msgs,
 			fmt.Sprintf(
-				"The following labels are not-whitelisted palindromes: %s",
+				"Too many palindrome labels that are not-whitelisted: %s. Max allowed [%d]",
 				strings.Join(palindromes, ","),
+				settings.Threshold,
 			))
 	}
 
